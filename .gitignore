@@ -1,0 +1,10 @@
+*.iml
+.idea
+nb*
+target/
+.project
+.classpath
+.settings
+.tomcatplugin
+test-output/
+.miredot-offline.json
