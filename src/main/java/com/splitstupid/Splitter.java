@@ -1,28 +1,39 @@
 package com.splitstupid;
 
+import org.springframework.stereotype.Service;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
+/**
+ * Responsible for splitting the given expenses.
+ */
+@Service
 public class Splitter {
 
-    public void split(final Map<String, Double> expenses) {
-        System.out.println("----------------------------------------------");
-        System.out.println(expenses);
+    public String split(final Set<Expense> expenses) {
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+
+        printWriter.println("----------------------------------------------");
+        printWriter.println(expenses);
 
         final int numberOfParticipants = expenses.size();
-        System.out.println("Number of participants: " + numberOfParticipants);
-        final double totalExpenses = expenses.values().stream().reduce(0d, (a,b) -> a+b);
-        System.out.println("Total expenses: " + totalExpenses);
-        final double average = totalExpenses/numberOfParticipants;
-        System.out.println("Average expense: " + average);
-        System.out.println("----------------------------------------------");
+        printWriter.println("Number of participants: " + numberOfParticipants);
 
-        final Map<String, Double> depts = new HashMap<>();
-        for(Map.Entry<String, Double> expense: expenses.entrySet()) {
-            depts.put(expense.getKey(), expense.getValue() - average);
-        }
+        double totalExpenses = getTotalExpenses(expenses);
+        printWriter.println("Total expenses: " + totalExpenses);
 
-        while(isDebt(depts)) {
+        final double average = totalExpenses / numberOfParticipants;
+        printWriter.println("Average expense: " + average);
+        printWriter.println("----------------------------------------------");
+
+        final Map<String, Double> depts = getDepts(expenses, average);
+
+        while (isDebt(depts)) {
             Map.Entry<String, Double> min = null;
             for (Map.Entry<String, Double> entry : depts.entrySet()) {
                 if (min == null || min.getValue() > entry.getValue()) {
@@ -37,20 +48,37 @@ public class Splitter {
                 }
             }
 
-            if(max.getValue()+min.getValue() >0) {
-                System.out.println(min.getKey() + " pays to " + max.getKey() + " " +  Math.abs(min.getValue()));
-                max.setValue(max.getValue()+min.getValue());
+            if (max.getValue() + min.getValue() > 0) {
+                printWriter.println(min.getKey() + " pays to " + max.getKey() + " " + Math.abs(min.getValue()));
+                max.setValue(max.getValue() + min.getValue());
                 min.setValue(0d);
             } else {
-                System.out.println(min.getKey() + " pays to " + max.getKey() + " " +  max.getValue());
-                min.setValue(max.getValue()+min.getValue());
+                printWriter.println(min.getKey() + " pays to " + max.getKey() + " " + max.getValue());
+                min.setValue(max.getValue() + min.getValue());
                 max.setValue(0d);
             }
         }
+        return stringWriter.toString();
+    }
+
+    private double getTotalExpenses(final Set<Expense> expenses) {
+        double totalExpenses = 0;
+        for (Expense expense : expenses) {
+            totalExpenses += expense.getParticipation();
+        }
+        return totalExpenses;
+    }
+
+    private Map<String, Double> getDepts(final Set<Expense> expenses, final double average) {
+        final Map<String, Double> depts = new HashMap<>();
+        for (Expense expense : expenses) {
+            depts.put(expense.getParticipant(), expense.getParticipation() - average);
+        }
+        return depts;
     }
 
     private boolean isDebt(Map<String, Double> depts) {
         return depts.values().stream()
-            .anyMatch(value -> value < 0);
+                   .anyMatch(value -> value < 0);
     }
 }
